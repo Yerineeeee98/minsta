@@ -1,0 +1,11 @@
+asgiref==3.8.1
+Django==5.1.7
+pillow==11.1.0
+sqlparse==0.5.3
+tzdata==2025.2
+
+# 프로젝트에 필요한 python 패키지들의 버전을 관리하고,
+# 다른 사람들이 동일한 환경을 쉽게 구축할 수 있도록 하기 위해서
+# 다른 개발자나 서버에 프로젝트를 배포할때 requirements.txt 파일을 통해
+# 동일한 버전의 패키지들을 설치할 수 있음
+#` pip install -r requirements.txt` 이 명령어를 사옹해서 다른 서버에서 설치
