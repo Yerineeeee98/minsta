@@ -90,3 +90,178 @@ def index(request):
     {% endfor %}
 {% endblock %}
 ```
+# 8. post read 기능 업데이트
+1️⃣ `settings.py`에서 미디어 파일 설정
+- 업로드한 사진을 저장할 위치를 설정하기 위해 `MEDIA_ROOT`와 `MEDIA_URL`을 추가함.
+
+- ```python
+    # 업로드한 사진을 저장할 위치 (실제 폴더 경로)
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+    # 미디어 경로를 처리할 URL
+    MEDIA_URL = '/media/'
+    ```
+이렇게 설정하면, Django가 업로드된 미디어 파일을 media/ 폴더에 저장하고, MEDIA_URL을 통해 접근할 수 있게 됨.
+
+2️⃣ `templates/` 폴더에 `_card.html` 파일 생성
+게시글을 카드 형식으로 보기 위해 `posts/templates/` 폴더에 `_card.html`을 만듦.
+
+- ```html
+
+    <div class="card my-3" style="width: 18rem;">
+     <div class="card-header">
+         <p>username</p>
+     </div>
+     <img src="{{ post.image.url }}" class="" alt="..."> 
+        # post.image.url → 업로드된 이미지의 경로를 불러옴.
+     <div class="card-body">
+       <!-- <h5 class="card-title">Card title</h5> -->
+       <p class="card-text">{{ post.content }}</p>
+       # post.content → 게시글 내용을 표시함.
+       <p class="card-text">{{ post.created_at }}</p>
+       # post.created_at → 게시글이 작성된 날짜를 표시함.
+       <!-- <a href="#" class="btn btn-primary">Go somewhere</a> -->
+     </div>
+ </div>
+        ```
+
+3️⃣ `index.html`에서 `_card.html` 포함
+-  `_card.html`을 재사용하기 위해 index.html에서 {% include '_card.html' %}을 추가함.
+
+- ```python
+     {% extends 'base.html' %}
+
+     {% block body %}
+        {% for post in posts %} # 모든 게시글을 반복해서 _card.html을 사용함.
+            {% include '_card.html' %}
+                 # _card.html 템플릿을 포함하여 게시글을 카드 형태로 표시함.
+        {% endfor %}
+    {% endblock %}
+
+
+4️⃣ `base.html`에서 컨테이너 추가
+- `base.html`에서 `<div class="container">`를 추가하여 템플릿 구조를 정리함.
+
+- ```html
+
+    <div class="container">
+        # container 클래스를 사용하여 페이지의 전체적인 여백을 조정함.
+        {% block body %}
+        {% endblock %}
+        # {% block body %}{% endblock %}을 감싸서 모든 페이지에서 적용되도록 설정함.
+    </div>
+    ```
+
+# 9. post create 기능 구현
+1️⃣ `INSTALLED_APPS`에 `django_bootstrap5` 추가
+- `settings.py`에서 `INSTALLED_APPS`에 `'django_bootstrap5'`를 추가하여 Bootstrap을 활용한 폼 스타일을 사용할 수 있도록 설정함.
+- `pip install django-bootstrap5` 명령어 실행 
+-   ```python
+
+    INSTALLED_APPS = [
+    ...
+    'django_bootstrap5',
+    ]
+    ```
+2️⃣ `posts/urls.py`에 `create` 경로 추가
+- 게시글을 생성할 페이지`(create/)`를 위한 URL을 `posts/urls.py`에 추가함.
+
+- ``` python
+
+    urlpatterns = [
+    path('create/', views.create, name='create'),
+    ]
+    path('create/', views.create, name='create')
+  ```  
+
+
+3️⃣ `forms.py`에서 `PostForm` 생성
+- 게시글을 생성할 때 사용할 폼을 `forms.py`에 작성함.
+
+- ``` python
+
+    from django.forms import ModelForm
+    from .models import Post
+
+    class PostForm(ModelForm):
+        class Meta:
+            model = Post
+            fields = '__all__'
+    #ModelForm을 사용하여 Post 모델을 기반으로 입력 폼을 생성함.
+    ```
+
+
+4️⃣ `views.py`에서 `create` 함수 작성
+사용자가 글을 작성하고 저장할 수 있도록 `create` 함수를 작성함.
+
+- ```python
+    from django.shortcuts import render, redirect
+    from .forms import PostForm
+
+    def create(request):
+        if request.method == 'POST':
+            form = PostForm(request.POST, request.FILES)
+            if form.is_valid():
+                form.save()
+            return redirect('posts:index')
+            else:
+                form = PostForm()
+    
+            context = {
+            'form': form,
+            }
+        return render(request, 'create.html', context)
+    # 동작 과정
+    #GET 요청 → 비어있는 폼을 생성해서 create.html에 전달함.
+
+    #POST 요청
+
+    #사용자가 입력한 데이터로 PostForm 객체를 생성함.
+
+    #form.is_valid()로 데이터 검증을 수행함.
+
+    #유효한 데이터면 form.save()로 저장하고, index 페이지로 이동함.
+
+    #유효하지 않으면 다시 폼을 보여줌.
+
+5️⃣ `create.html` 생성
+- `posts/templates/` 폴더에 `create.html`을 만들어 폼을 렌더링함.
+
+- ```html
+    {% extends 'base.html' %}
+    {% load django_bootstrap5 %}
+
+    {% block body %}
+    <form action="" method="POST" enctype="multipart/form-data">
+        {% csrf_token %} → 보안상 필요한 CSRF 토큰을 추가함.
+
+        {% bootstrap_form form %}
+        <input type="submit" value="💛" style="background-color: #FFFACD; color: black; border: 1px solid #FFD700; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+    </form>
+    {% endblock %}
+    ```
+
+6️⃣  `nav.html` 생성 (네비게이션 바 추가)
+- `templates/` 폴더에 `nav.html`을 생성하여 상단 네비게이션 바를 만듦.
+
+- ```html
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'posts:index' %}">insta</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+        <div class="navbar-nav">
+          <a class="nav-link" href="{% url 'posts:create' %}">Create</a>
+          <a class="nav-link" href="#">Signup</a>
+          <a class="nav-link" href="#">Login</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+    ```
+
+
+
+
