@@ -90,7 +90,36 @@ def index(request):
     {% endfor %}
 {% endblock %}
 ```
-# 8. post read 기능 업데이트
+# 8. media 설정
+1️⃣ `settings.py`에서 미디어 파일 설정
+- ```python
+    # 업로드한 사진을 저장한 위치 (실제 폴더 경로)
+    MEDIA_ROOT = BASE_DIR / 'image' → 업로드된 파일이 저장될 실제 폴더 경로를 BASE_DIR/image로 설정함.
+
+    # 미디어 경로를 처리할 URL
+    MEDIA_URL = '/image/' → 미디어 파일을 불러올 때 사용할 URL 경로를 /image/로 지정함.
+                            예를 들어, post.image.url을 사용하면 /image/파일이름.jpg와 같은 URL이 만들어짐.
+    ```
+
+2️⃣ `urls.py`에서 미디어 URL 연결
+- `insta/urls.py`에서 `MEDIA_URL`과 `MEDIA_ROOT`를 추가하여, 미디어 파일을 브라우저에서 접근할 수 있도록 설정함.
+
+- ``` python
+    from django.conf.urls.static import static
+    from django.conf import settings
+
+    urlpatterns = [
+    ...
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # → 개발 환경에서 Django가 MEDIA_URL로 요청된 파일을 MEDIA_ROOT에서 찾아 제공하도록 설정함.
+     # (운영 환경에서는 웹 서버(Nginx, Apache)가 이 역할을 대신함.)
+  ```
+
+3️⃣ `models.py`에서 `ImageField` 설정 확인
+- 이미지 업로드가 가능하도록 `models.py`에서 `ImageField`가 올바르게 설정되어 있어야 함.
+- `image = models.ImageField(upload_to='image')`
+    - 업로드된 이미지가 image 폴더에 저장됨.
+
+# 9. post read 기능 업데이트
 1️⃣ `settings.py`에서 미디어 파일 설정
 - 업로드한 사진을 저장할 위치를 설정하기 위해 `MEDIA_ROOT`와 `MEDIA_URL`을 추가함.
 
@@ -152,7 +181,7 @@ def index(request):
     </div>
     ```
 
-# 9. post create 기능 구현
+# 10. post create 기능 구현
 1️⃣ `INSTALLED_APPS`에 `django_bootstrap5` 추가
 - `settings.py`에서 `INSTALLED_APPS`에 `'django_bootstrap5'`를 추가하여 Bootstrap을 활용한 폼 스타일을 사용할 수 있도록 설정함.
 - `pip install django-bootstrap5` 명령어 실행 
@@ -264,4 +293,36 @@ def index(request):
 
 
 
+# 11. image resize 기능 추가
+1️⃣ `posts/models.py`에서 이미지 필드 수정
+- 기존 `ImageField`를 `ResizedImageField`로 변경
 
+- 이미지 크기를 500x500으로 조정
+
+- 이미지를 중앙(middle, center)에서 크롭
+
+- upload_to='image/%Y/%m'을 설정해 연/월 단위로 이미지 저장
+
+- ```python
+
+    from django_resized import ResizedImageField
+
+    image = ResizedImageField(
+    size=[500, 500],  # 이미지 크기 조정 (500x500)
+    crop=['middle', 'center'],  # 중앙에서 크롭
+    upload_to='image/%Y/%m'  # 연/월별로 이미지 저장
+    )
+    ```
+2️⃣ `requirements.txt` 업데이트
+- `django-bootstrap5==25.1`
+
+- `django-resized==1.0.3`
+
+3️⃣ 필수 패키지 설치 `(pip install)`
+- 아래 명령어 실행해서 django-resized 라이브러리 설치
+- `pip install django-resized`
+
+4️⃣ `migrations` 적용
+- 모델을 수정했으므로 데이터베이스에 반영해야 함
+- `python manage.py makemigrations`
+- `python manage.py migrate`
