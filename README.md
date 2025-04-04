@@ -326,3 +326,6 @@ def index(request):
 - 모델을 수정했으므로 데이터베이스에 반영해야 함
 - `python manage.py makemigrations`
 - `python manage.py migrate`
+
+# 12. accounts app 생성
+- `django-admin startapp accounts`
