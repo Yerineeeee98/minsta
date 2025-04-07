@@ -18,7 +18,7 @@
     - ```python
         class Post(models.Model): # Django 모델 정의
             content = models.TextField() # 게시글 내용용
-            created_at = models.DateTimeField(auto_now_add=True) # 생성된 날짜짜
+            created_at = models.DateTimeField(auto_now_add=True) # 생성된 날짜
              image = models.ImageField(upload_to='image') # 이미지 업로드
       ```
 - models.py에서 POST클래스를 정의한 이유는 장고의 데이터베이스 모델을 만들기 위해서 이 모델을 기반으로 데이터베이스 테이블이 생성되고, 다른 곳에서 불러와 사용할 수 있음
@@ -78,7 +78,7 @@ def index(request):
 - 4️⃣ index.html에서 게시글 표시
     - index.html 파일에서 게시글을 표시하려면:
 
-    - `{% for post in posts %}`로 `posts` 객체를 반복문으로 순회하면서, 각 post의 내용을 출력해야 해.
+    - `{% for post in posts %}`로 `posts` 객체를 반복문으로 순회하면서, 각 post의 내용을 출력해야함함.
 
 ```python
 {% extends 'base.html' %}
@@ -329,3 +329,330 @@ def index(request):
 
 # 12. accounts app 생성
 - `django-admin startapp accounts`
+
+# 13. 회원가입 기능 구현
+👉 **forms.py**를 만든 이유?
+- 회원가입 시 입력을 쉽게 처리하기 위해
+
+- Django 기본 회원가입 폼(`UserCreationForm`)을 가져와 커스텀해서 사용자가 추가 정보를 입력할 수 있도록 만듦.
+
+- 입력된 데이터의 검증 및 유효성 체크
+
+- 사용자가 입력한 데이터가 올바른지 확인하고, 잘못된 데이터를 방지함.
+
+- 폼을 통해 HTML 입력 폼을 자동 생성할 수 있음
+
+- Django의 forms.py를 이용하면 {{ form }}만으로 HTML 입력 폼을 생성할 수 있어 코드가 간결해짐.
+
+**1️⃣** `accounts` 앱 생성
+- `accounts` 앱을 생성해서 회원가입 기능을 따로 관리하도록 함.
+
+2️⃣ `forms.py` (회원가입 폼 생성)
+- 📌 `accounts/forms.py`
+- ```python
+    from django.contrib.auth.forms import UserCreationForm  # Django 기본 회원가입 폼 가져옴
+    from .models import User  # 사용자 모델 가져옴
+
+    class CustomUserCreationForm(UserCreationForm):
+        class Meta:
+            model = User  # User 모델을 기반으로 회원가입 폼 생성
+            fields = ('username', 'profile_image',)  # 회원가입 시 받을 정보
+    ```
+- ✅ 설명
+    - `UserCreationForm`: `Django` 기본 회원가입 폼을 상속받아 커스텀한 폼.
+
+    - `model = User`: `User` 모델과 연결하여 회원 정보를 데이터베이스에 저장할 수 있도록 함.
+
+    - `fields = ('username', 'profile_image',)`: 회원가입 시 사용자명과 프로필 이미지를 입력받도록 설정.
+
+3️⃣ `urls.py` (URL 설정)
+- 📌 `accounts/urls.py`
+- ```python
+
+    from django.urls import path
+    from . import views
+
+    app_name = 'accounts'  # URL 네임스페이스 설정
+
+    urlpatterns = [
+        path('signup/', views.signup, name='signup'),  # 회원가입 페이지 URL 추가
+    ]
+    ```    
+- ✅ 설명
+    - `app_name = 'accounts'`: 다른 앱과 URL 네임스페이스가 겹치지 않도록 설정.
+
+    - `path('signup/', views.signup, name='signup')`: `/accounts/signup/`으로 접근하면 `views.signup` 실행.
+
+4️⃣ `views.py` (회원가입 로직)
+- 📌 `accounts/views.py`
+- ```python
+    from django.shortcuts import render, redirect
+    from .forms import CustomUserCreationForm
+
+    def signup(request):
+        if request.method == 'POST':  # 회원가입 폼 제출 시
+            form = CustomUserCreationForm(request.POST, request.FILES)
+            if form.is_valid():  # 입력 데이터 검증
+                form.save()  # 회원가입 완료 (DB에 저장)
+                return redirect('posts:index')  # 회원가입 후 게시물 리스트 페이지로 이동
+    
+        else:  # GET 요청 시 (회원가입 폼 띄우기)
+            form = CustomUserCreationForm()
+
+        context = {'form': form}  # 폼을 템플릿으로 전달
+        return render(request, 'signup.html', context)
+- ✅ 설명
+    - `if request.method == 'POST'`: 사용자가 회원가입 정보를 입력한 후 제출했을 때 실행.
+
+    - `form = CustomUserCreationForm(request.POST, request.FILES)`: 사용자가 입력한 데이터로 폼 생성.
+
+    - `if form.is_valid()`: 데이터가 유효하면 저장.
+
+    - `form.save()`: 입력받은 회원 정보를 DB에 저장.
+
+    - `return redirect('posts:index')`: 회원가입 후 게시물 리스트 페이지(/posts/)로 이동.
+
+    - `else`: `GET` 요청일 경우 빈 회원가입 폼을 띄움.
+
+    - `context = {'form': form}`: 폼을 `signup.html` 템플릿으로 전달.
+
+5️⃣ `insta/urls.py` (전체 URL 연결)
+- 📌 `insta/urls.py`
+- ```python
+    from django.urls import path, include
+    from django.conf.urls.static import static
+    from django.conf import settings
+
+    urlpatterns = [
+        path('accounts/', include('accounts.urls')),  # accounts 앱의 URL 포함
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  # 미디어 파일 URL 설정
+    ```
+- ✅ 설명
+    - `path('accounts/', include('accounts.urls'))`: `/accounts/`로 시작하는 요청을 `accounts/urls.py`에서 처리하도록 설정.
+
+    - `static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`: 사용자가 업로드한 미디어 파일을 처리할 수 있도록 설정.
+
+6️⃣ `signup.html` (회원가입 템플릿)
+- 📌 `accounts/templates/signup.html`
+- ```html
+    {% extends 'base.html' %}
+    {% load django_bootstrap5 %}
+
+    {% block body %}
+
+    <form action="" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <input type="submit" class="btn btn-primary">
+    </form>
+
+    {% endblock %}
+  ```
+- ✅ 설명
+    - `{% extends 'base.html' %}`: `base.html` 레이아웃을 확장하여 사용.
+
+    - `{% load django_bootstrap5 %}`: Django Bootstrap5 기능을 로드하여 폼을 부트스트랩 스타일로 적용.
+
+    - `action=""`: 현재 페이지에서 폼을 제출.
+
+    - `method="POST"`: 데이터를 서버에 전송.
+
+    - `enctype="multipart/form-data"`: 이미지 업로드를 위해 설정.
+
+    - `{% csrf_token %}`: 보안 토큰 추가.
+
+    - `{% bootstrap_form form %}`: 폼을 부트스트랩 스타일로 출력.
+
+    - `<input type="submit" class="btn btn-primary">`: 제출 버튼 생성.
+
+- 📌 전체 과정 요약
+    - accounts 앱 생성
+
+        - 회원가입 기능을 따로 관리하기 위해 새로운 앱을 생성.
+
+    - 회원가입 폼 (forms.py)
+
+        - Django 기본 회원가입 폼(UserCreationForm)을 상속받아 커스텀함.
+
+        - username과 profile_image 필드를 입력받도록 설정.
+
+    - URL 설정 (accounts/urls.py)
+
+        - /accounts/signup/으로 접근하면 views.signup이 실행되도록 설정.
+
+    - 회원가입 로직 (views.py)
+
+        - POST 요청 시: 입력한 데이터가 유효하면 회원가입 처리 후 게시물 리스트 페이지(/posts/)로 이동.
+
+        - GET 요청 시: 빈 회원가입 폼을 보여줌.
+
+    - 프로젝트 URL 설정 (insta/urls.py)
+
+        - accounts 앱의 URL을 프로젝트에 포함.
+
+        - static() 설정을 추가해 업로드한 미디어 파일을 처리할 수 있도록 설정.
+
+    - 회원가입 템플릿 (signup.html)
+
+        - base.html을 확장하여 부트스트랩 스타일을 적용한 회원가입 폼 생성.
+
+# 14. 로그인 기능 구현
+1️⃣ 로그인 폼 생성 – `accounts/forms.py`
+- ```python
+    from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+
+    class CustomAuthenticationForm(AuthenticationForm):
+    pass
+    ```
+    - 💡 설명:
+        - `AuthenticationForm`: `Django`에서 기본 제공하는 로그인 폼 클래스
+
+        - `CustomAuthenticationForm`: 기본 로그인 폼을 그대로 사용할 거지만, 커스터마이징할 준비를 위해 클래스를 따로 만들어줌
+
+2️⃣ 로그인 URL 연결 – `accounts/urls.py`
+- ```python
+    from django.urls import path
+    from . import views
+
+    app_name = 'accounts'
+
+    urlpatterns = [
+        path('signup/', views.signup, name='signup'),
+        path('login/', views.login, name='login'),  # 로그인 URL 추가!
+    ]
+    ```
+    - 💡 설명:
+        - `path('login/', views.login, name='login')`: `/accounts/login/`으로 접속하면 `login 뷰 함수`가 실행.
+
+3️⃣ 로그인 뷰 함수 – `accounts/views.py`
+- ```python
+    from .forms import CustomUserCreationForm, CustomAuthenticationForm
+    from django.contrib.auth import login as auth_login 
+    from django.shortcuts import render, redirect
+
+    def login(request):
+        if request.method == 'POST':
+            form = CustomAuthenticationForm(request, request.POST)  # 사용자 입력 데이터 받기
+            if form.is_valid():  # 입력된 데이터가 유효하다면
+                user = form.get_user()  # 로그인할 사용자 객체 가져옴
+                auth_login(request, user)  # 로그인 처리 (세션에 사용자 정보 저장)
+            return redirect('posts:index')  # 로그인 후 게시물 목록으로 이동
+        else:
+            form = CustomAuthenticationForm()  # GET 요청일 경우, 빈 로그인 폼 생성
+
+        context = {
+            'form': form,
+        }
+
+        return render(request, 'login.html', context)  # 로그인 템플릿 렌더링
+    ```
+    - 💡 설명 요약:
+        - `auth_login(request, user)`: `Django` 내부에서 세션을 생성하고 로그인 상태로 만들어주는 함수
+
+        - `request, request.POST`: 로그인 폼은 인증 관련 보안 처리를 위해 `request` 객체도 같이 넘겨줘야 함.
+
+    - `form.get_user()`: 인증이 완료된 사용자 객체를 가져오는 메서드.
+
+4️⃣ 로그인 템플릿 – `accounts/templates/login.html`
+- ```html
+    {% load django_bootstrap5 %}
+
+    {% block body %}
+        <form action="" method ="POST">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <input type="submit" value="💛 login" 
+               style="background-color: #fff8b5; 
+                      color: black;
+                      border: none;  테두리 없음
+                      border-radius: 50px; 둥글게 
+                      padding: 10px 20px; 위아래 양옆 여백
+                      font-size: 16px;
+                      font-weight: bold; 두껍게
+                      cursor: pointer;"> 마우스 커서를 갖다대면 클릭모양으로 바뀌게
+        </form>
+     
+    {% endblock %}
+    ```
+    - 💡 설명:
+        - `{% csrf_token %}`: 보안 토큰은 필수, 안 넣으면 POST 요청에서 에러가 남.
+
+        - `{% bootstrap_form form %}`: 부트스트랩으로 자동 스타일링된 폼 출력.
+
+        - `<input type="submit">`: 로그인 버튼을 예쁘게 스타일링해준 부분
+
+✅ 요약 흐름
+- 1️⃣	CustomAuthenticationForm 폼으로 사용자 입력을 받을 준비를 함
+- 2️⃣	/accounts/login/ URL 설정
+- 3️⃣	로그인 뷰 함수에서 로그인 처리 (auth_login)
+- 4️⃣	템플릿에서 로그인 폼 보여주고 버튼 누르면 POST로 처리
+
+# 15. 로그아웃 기능 구현
+1️⃣ 로그아웃 URL 설정
+- 📌 `accounts/urls.py`
+
+- ```python
+    from django.urls import path
+    from . import views
+
+    app_name = 'accounts'
+
+    urlpatterns = [
+        path('signup/', views.signup, name='signup'),
+        path('login/', views.login, name='login'),
+        path('logout/', views.logout, name='logout'),  # 🔥 로그아웃 추가
+    ]
+    ```
+    - ✅ 설명
+
+        - `path('logout/', views.logout, name='logout')`: `/accounts/logout/`으로 접근하면 로그아웃 처리.
+
+2️⃣ 로그아웃 로직
+- 📌 `accounts/views.py`
+
+- ```python
+    from django.contrib.auth import logout as auth_logout
+
+    def logout(request):
+        auth_logout(request)  # 세션 종료 → 로그아웃 처리
+        return redirect('posts:index')  # 로그아웃 후 메인 페이지로 이동
+  ```  
+    - ✅ 설명
+
+        - ` auth_logout(request)`: `Django` 내부 세션 삭제 → 로그아웃 완료.
+
+        - `redirect('posts:index')`: 로그아웃 후 게시물 목록 페이지`(/posts/)`로 이동.
+
+3️⃣ 내비게이션 바에 표시
+- 📌 `templates/_nav.html`
+
+- ```html
+    {% if user.is_authenticated %}
+        <a class="nav-link" href="{% url 'posts:create' %}">Create</a>
+        <a class="nav-link" href="{% url 'accounts:logout' %}">logout</a>
+        <a class="nav-link disabled" href="">{{ user }}</a>
+    {% else %}
+        <a class="nav-link" href="{% url 'accounts:signup' %}">Signup</a>
+        <a class="nav-link" href="{% url 'accounts:login' %}">login</a>
+    {% endif %}
+    ```
+    - ✅ 설명
+
+        - `user.is_authenticated`: 로그인 상태인지 판별.
+
+        - 로그인 상태면 → Create, logout, 사용자명 표시.
+
+        - 로그아웃 상태면 → Signup, login 링크 표시.
+
+- 📌 전체 과정 요약
+    - ✅ 1. 로그아웃 URL 연결 (accounts/urls.py)
+        - /accounts/logout/ 경로에 로그아웃 뷰 연결.
+
+    - ✅ 2. 로그아웃 로직 (views.py)
+        - 세션 종료 → 사용자 로그아웃 → 게시글 페이지로 이동.
+
+    - ✅ 3. 로그인 상태에 따른 메뉴 표시 (_nav.html)
+        - 로그인 되어 있으면 Create, logout, 사용자 이름 표시.
+
+        - 로그인 안 되어 있으면 Signup, login 버튼만 표시.
+

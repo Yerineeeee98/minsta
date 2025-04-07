@@ -8,6 +8,7 @@ app_name = "posts"
 urlpatterns = [
     path('', views.index, name = "index"),
     path('create/', views.create, name = "create"),
+    
 ]
 
 static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

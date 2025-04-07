@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% load django_bootstrap5 %}
+
+{% block body %}
+    <form action="" method ="POST">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <input type="submit" value="💛 login 💛" 
+        style="background-color: #fff8b5; 
+               color: black;
+               border: none;  
+               border-radius: 50px; 
+               padding: 10px 20px; 
+               font-size: 16px;
+               font-weight: bold;
+               cursor: pointer;">
+
+    </form>
+
+{% endblock %}
