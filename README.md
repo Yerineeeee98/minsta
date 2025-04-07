@@ -327,9 +327,11 @@ def index(request):
 - `python manage.py makemigrations`
 - `python manage.py migrate`
 
+---
 # 12. accounts app 생성
 - `django-admin startapp accounts`
 
+---
 # 13. 회원가입 기능 구현
 👉 **forms.py**를 만든 이유?
 - 회원가입 시 입력을 쉽게 처리하기 위해
@@ -496,6 +498,7 @@ def index(request):
 
         - base.html을 확장하여 부트스트랩 스타일을 적용한 회원가입 폼 생성.
 
+---
 # 14. 로그인 기능 구현
 1️⃣ 로그인 폼 생성 – `accounts/forms.py`
 - ```python
@@ -587,6 +590,8 @@ def index(request):
 - 3️⃣	로그인 뷰 함수에서 로그인 처리 (auth_login)
 - 4️⃣	템플릿에서 로그인 폼 보여주고 버튼 누르면 POST로 처리
 
+
+---
 # 15. 로그아웃 기능 구현
 1️⃣ 로그아웃 URL 설정
 - 📌 `accounts/urls.py`
@@ -655,4 +660,86 @@ def index(request):
         - 로그인 되어 있으면 Create, logout, 사용자 이름 표시.
 
         - 로그인 안 되어 있으면 Signup, login 버튼만 표시.
+
+# 16. post create/read 기능 업데이트
+1️⃣ PostForm 필드 수정
+- 📌 `posts/forms.py`
+
+- ```python
+    from django import forms
+    from .models import Post
+
+    class PostForm(forms.ModelForm):
+        class Meta:
+            model = Post
+            fields = ('content', 'image', )  # ✅ 필요한 필드만 지정
+  ```  
+    - ✅ 설명
+
+        - 원래는 `fields = '__all__'`로 모든 필드를 다 폼에 포함시켰지만, `user` 필드는 사용자 입력이 아닌, `view`에서 자동으로 지정해야 하므로 제외해야 함.
+
+        - 그래서 명시적으로 `('content', 'image')`만 폼에 포함시킴.
+
+2️⃣ 사용자 정보 출력
+- 📌 `posts/templates/_card.html`
+
+- ```html
+    <img class="rounded-circle" src="{{ post.user.profile_image.url }}" alt="" width="30px">
+    <a href="">{{ post.user.username }}</a>
+    ```
+    - ✅ 설명
+
+        - 게시글 카드에 작성자 프로필 사진과 유저 이름을 표시.
+
+        - `post.user.profile_image.url`: 유저의 프로필 이미지 경로.
+
+        - `post.user.username`: 유저 이름.
+
+3️⃣ 게시글 작성 뷰 수정
+- 📌 `posts/views.py`
+
+- ```python
+    from django.contrib.auth.decorators import login_required
+    from .forms import PostForm
+
+    @login_required  # 로그인한 유저만 접근 가능
+    def create(request):
+        if request.method == 'POST':
+            form = PostForm(request.POST, request.FILES)
+            if form.is_valid():
+                post = form.save(commit=False)  # ✅ 저장을 잠시 멈춤
+                post.user = request.user       # ✅ 작성자 정보 추가
+                post.save()                    # ✅ 최종 저장
+                return redirect('posts:index')
+        else:
+            form = PostForm()
+
+        context = {
+            'form': form,
+            }
+        return render(request, 'posts/form.html', context)
+    ```
+    - ✅ 설명
+
+        - `@login_required`: 로그인하지 않으면 `/accounts/login/`으로 리다이렉트됨.
+
+        - `form.save(commit=False)`: DB에 저장하지 않고 객체만 생성.
+
+        - `post.user = request.user`: 현재 로그인한 유저를 post 작성자로 설정.
+
+        - `post.save()`: 작성자 정보를 포함한 post를 DB에 저장.
+
+📌 전체 요약
+- ✅ 1. 폼 필드 제한 (forms.py)
+    - 사용자가 입력해야 할 필드만 명확하게 설정 (content, image).
+    - 자동으로 설정될 필드(user)는 제외.
+
+- ✅ 2. 카드 템플릿에 작성자 표시 (_card.html)
+    - 게시물 목록에 작성자 이름과 프로필 사진 추가.
+
+- ✅ 3. 게시글 작성 로직 개선 (views.py)
+    - 로그인한 사용자만 글 작성 가능.
+
+    - 작성자 정보(post.user)를 자동으로 설정.
+
 

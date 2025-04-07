@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import Post
 from .forms import PostForm
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
@@ -13,6 +14,7 @@ def index(request):
     
     return render(request, 'index.html', context)
 
+@login_required
 def create(request):
     
     # 모든 경우의 수
@@ -37,7 +39,9 @@ def create(request):
         # 12. form을 검증 (성공)
         if form.is_valid(): # 이상한 데이터인지 아닌지 검증하기(데이터가 유효한지 아닌지)
             # 13. form 저장
-            form.save()
+            post = form.save(commit=False)
+            post.user = request.user
+            post.save()
             # 14. index로 redirect
             return redirect('posts:index')
     else: # 유효하지 않으면 다시 작성하라고 하기
